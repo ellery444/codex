@@ -512,6 +512,7 @@ fn transcript_overlay_preserves_live_tail_when_prepending_history() {
             cacheable: true,
             revision: 1,
             is_stream_continuation: false,
+            is_assistant_response: false,
             animation_tick: None,
         }),
         |_| Some(vec![HyperlinkLine::from("live tail")]),
@@ -544,6 +545,7 @@ fn transcript_overlay_absorbs_older_tail_into_live_without_duplicate_cells() {
         cacheable: true,
         revision: 1,
         is_stream_continuation: false,
+        is_assistant_response: false,
         animation_tick: None,
     };
     overlay.sync_live_tail(/*width*/ 40, Some(key), |_| {
@@ -591,6 +593,7 @@ fn transcript_overlay_live_tail_preserves_semantic_web_links() {
             cacheable: true,
             revision: 1,
             is_stream_continuation: false,
+            is_assistant_response: false,
             animation_tick: None,
         }),
         |width| Some(cell.transcript_hyperlink_lines(width)),
@@ -615,6 +618,7 @@ fn transcript_overlay_sync_live_tail_is_noop_for_identical_key() {
         cacheable: true,
         revision: 1,
         is_stream_continuation: false,
+        is_assistant_response: false,
         animation_tick: None,
     };
 
@@ -651,6 +655,7 @@ fn transcript_overlay_history_rebuild_preserves_only_the_live_tail() {
                 cacheable: true,
                 revision: 1,
                 is_stream_continuation: false,
+                is_assistant_response: false,
                 animation_tick: None,
             });
             overlay.sync_live_tail(/*width*/ 40, key, |_| tail.clone());
@@ -908,4 +913,56 @@ async fn navigation_supersedes_home_before_and_after_the_first_draw() {
             );
         }
     }
+}
+
+#[tokio::test]
+async fn alt_arrows_navigate_answers_in_the_transcript_overlay() {
+    let cells: Vec<Arc<dyn HistoryCell>> = vec![
+        Arc::new(history_cell::new_user_prompt(
+            "first question".into(),
+            vec![],
+            vec![],
+            vec![],
+        )),
+        Arc::new(history_cell::AgentMessageCell::new(
+            vec!["first answer".into()],
+            true,
+        )),
+        Arc::new(history_cell::new_user_prompt(
+            "second question".into(),
+            vec![],
+            vec![],
+            vec![],
+        )),
+        Arc::new(history_cell::AgentMessageCell::new(
+            vec!["second answer".into()],
+            true,
+        )),
+    ];
+    let mut overlay = transcript_overlay(cells);
+    let mut tui = crate::tui::test_support::make_test_tui().expect("test terminal");
+    let area = Rect::new(0, 0, 60, 10);
+    for (code, answer) in [
+        (KeyCode::Up, "second answer"),
+        (KeyCode::Up, "first answer"),
+        (KeyCode::Down, "second answer"),
+    ] {
+        overlay
+            .handle_event(
+                &mut tui,
+                TuiEvent::Key(KeyEvent::new(code, KeyModifiers::ALT)),
+            )
+            .expect("navigate transcript");
+        let mut buf = Buffer::empty(area);
+        overlay.render(area, &mut buf);
+        assert!(buffer_to_text(&buf, Rect::new(0, 2, 60, 1)).contains(answer));
+        assert!(!overlay.view.is_following());
+    }
+    overlay
+        .handle_event(
+            &mut tui,
+            TuiEvent::Key(KeyEvent::new(KeyCode::End, KeyModifiers::CONTROL)),
+        )
+        .expect("return to latest");
+    assert!(overlay.view.is_following());
 }

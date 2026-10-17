@@ -334,6 +334,11 @@ pub(crate) trait HistoryCell: std::fmt::Debug + Send + Sync + Any {
         true
     }
 
+    /// Assistant answer content, excluding reasoning, tools and notices.
+    fn is_assistant_response(&self) -> bool {
+        false
+    }
+
     fn is_stream_continuation(&self) -> bool {
         false
     }

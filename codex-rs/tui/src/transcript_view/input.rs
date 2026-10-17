@@ -39,12 +39,16 @@ enum MouseMode {
 pub(crate) enum JumpTarget {
     Beginning,
     Latest,
+    PreviousAnswer,
+    NextAnswer,
 }
 
 impl JumpTarget {
     /// Include the Alt alternative for terminals that do not send Ctrl+Home/End.
     pub(crate) fn hint_label(self) -> String {
         let (control, alternate) = match self {
+            Self::PreviousAnswer => return crate::key_hint::alt(KeyCode::Up).display_label(),
+            Self::NextAnswer => return crate::key_hint::alt(KeyCode::Down).display_label(),
             Self::Beginning => (KeyCode::Home, KeyCode::Char('<')),
             Self::Latest => (KeyCode::End, KeyCode::Char('>')),
         };
@@ -60,6 +64,8 @@ impl JumpTarget {
             return None;
         }
         match (key.code, key.modifiers) {
+            (KeyCode::Up, KeyModifiers::ALT) => Some(Self::PreviousAnswer),
+            (KeyCode::Down, KeyModifiers::ALT) => Some(Self::NextAnswer),
             (KeyCode::Home, KeyModifiers::CONTROL) => Some(Self::Beginning),
             (KeyCode::End, KeyModifiers::CONTROL) => Some(Self::Latest),
             // Zellij can omit the shifted alternate character from enhanced key events.
@@ -456,6 +462,8 @@ impl TranscriptView {
                 self.jump_to_beginning(cells);
             }
             _ if jump == Some(JumpTarget::Latest) => self.jump_to_latest(),
+            _ if jump == Some(JumpTarget::PreviousAnswer) => self.jump_answer(cells, false),
+            _ if jump == Some(JumpTarget::NextAnswer) => self.jump_answer(cells, true),
             _ => return None,
         }
         Some(ViewAction::Changed)

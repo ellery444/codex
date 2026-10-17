@@ -235,6 +235,7 @@ fn live(view: &mut TranscriptView, cell: &dyn HistoryCell, revision: u64) {
         cacheable: true,
         revision,
         is_stream_continuation: cell.is_stream_continuation(),
+        is_assistant_response: cell.is_assistant_response(),
         animation_tick: None,
     };
     view.sync_live_tail(/*width*/ 32, Some(key), |width| {
@@ -532,7 +533,7 @@ fn plain_and_shift_arrows_move_selection_on_press_and_repeat() {
 }
 
 #[test]
-fn modified_arrows_end_selection_and_return_input_to_the_owner() {
+fn modified_arrows_end_selection_and_route_to_navigation_or_composer() {
     let cells = vec![agent(&["alpha beta gamma"])];
     for kind in [KeyEventKind::Press, KeyEventKind::Repeat] {
         for modifier in [
@@ -551,10 +552,14 @@ fn modified_arrows_end_selection_and_return_input_to_the_owner() {
                         &cells, /*column*/ 9, /*row*/ 0, /*clicks*/ 2,
                     );
                     assert_eq!(view.selected_text(&cells).as_deref(), Some("beta"));
-                    assert!(
-                        view.handle_key(KeyEvent::new_with_kind(code, modifiers, kind), &cells)
-                            .is_none()
-                    );
+                    let action =
+                        view.handle_key(KeyEvent::new_with_kind(code, modifiers, kind), &cells);
+                    if modifiers == KeyModifiers::ALT && matches!(code, KeyCode::Up | KeyCode::Down)
+                    {
+                        assert!(matches!(action, Some(ViewAction::Changed)));
+                    } else {
+                        assert!(action.is_none());
+                    }
                     assert_eq!(
                         (view.has_active_interaction(), view.selected_text(&cells)),
                         (false, None)

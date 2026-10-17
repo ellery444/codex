@@ -61,6 +61,10 @@ impl StreamingPlanTailCell {
 }
 
 impl HistoryCell for StreamingPlanTailCell {
+    fn is_assistant_response(&self) -> bool {
+        true
+    }
+
     fn display_lines(&self, _width: u16) -> Vec<Line<'static>> {
         visible_lines(self.lines.clone())
     }
@@ -180,6 +184,10 @@ impl ProposedPlanCell {
 }
 
 impl HistoryCell for ProposedPlanCell {
+    fn is_assistant_response(&self) -> bool {
+        true
+    }
+
     fn copy_source(&self) -> Option<&str> {
         Some(&self.plan_markdown)
     }
@@ -210,6 +218,10 @@ impl HistoryCell for ProposedPlanCell {
 mod tests;
 
 impl HistoryCell for ProposedPlanStreamCell {
+    fn is_assistant_response(&self) -> bool {
+        true
+    }
+
     fn display_lines(&self, _width: u16) -> Vec<Line<'static>> {
         visible_lines(self.lines.clone())
     }

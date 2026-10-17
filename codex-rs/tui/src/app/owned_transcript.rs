@@ -612,6 +612,12 @@ impl App {
                     && !(empty_enter_returns_to_latest
                         && action.context == KeymapContext::Composer
                         && action.action == "submit")
+                    // Alt arrows belong to answer navigation in the owned viewport.
+                    && !matches!(
+                        crate::transcript_view::JumpTarget::from_key(*key),
+                        Some(crate::transcript_view::JumpTarget::PreviousAnswer
+                            | crate::transcript_view::JumpTarget::NextAnswer)
+                    )
                     && ((key.modifiers.is_empty()
                         && matches!(key.code, KeyCode::PageUp | KeyCode::PageDown))
                         || crate::transcript_view::JumpTarget::from_key(*key).is_some()

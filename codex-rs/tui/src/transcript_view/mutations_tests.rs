@@ -24,6 +24,7 @@ fn live(view: &mut TranscriptView, revision: u64, text: &str) {
             cacheable: true,
             revision,
             is_stream_continuation: false,
+            is_assistant_response: false,
             animation_tick: None,
         }),
         |width| Some(cell(text).display_hyperlink_lines(width)),

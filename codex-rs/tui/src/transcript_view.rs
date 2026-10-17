@@ -21,6 +21,7 @@ mod select_mode;
 mod selection;
 mod snapshot;
 mod text;
+mod turn_navigation;
 mod turn_tip;
 
 use std::sync::Arc;
@@ -96,6 +97,8 @@ pub(crate) struct TranscriptView {
     pub(crate) copy_on_select_clear_selection: bool,
     pub(crate) primary_selection: bool,
     position: Position,
+    pending_previous_answer: bool,
+    answer_turn: Option<EntryKey>,
     follow_control: follow_control::FollowControl,
     copy_feedback: Option<composer_gap::CopyFeedback>,
     composer_tip: Option<(Rect, HyperlinkLine)>,
@@ -136,6 +139,8 @@ impl Default for TranscriptView {
             copy_on_select_clear_selection: false,
             primary_selection: false,
             position: Position::Latest,
+            pending_previous_answer: false,
+            answer_turn: None,
             follow_control: follow_control::FollowControl::default(),
             copy_feedback: None,
             composer_tip: None,
@@ -183,6 +188,7 @@ impl TranscriptView {
     }
 
     pub(crate) fn render(&mut self, area: Rect, buf: &mut Buffer, cells: &[Arc<dyn HistoryCell>]) {
+        self.resume_answer_navigation(cells);
         self.composer_tip = None;
         self.prompt_header_target = None;
         self.cache.begin_frame();
@@ -433,6 +439,8 @@ impl TranscriptView {
 
     /// Hold the current reading position until every older page has arrived.
     pub(crate) fn jump_to_beginning(&mut self, cells: &[Arc<dyn HistoryCell>]) {
+        self.pending_previous_answer = false;
+        self.answer_turn = None;
         if self.history == TranscriptHistoryState::LoadingBeginning {
             return;
         }
@@ -519,6 +527,8 @@ impl TranscriptView {
     }
 
     pub(crate) fn cancel_beginning(&mut self) {
+        self.pending_previous_answer = false;
+        self.answer_turn = None;
         if self.history == TranscriptHistoryState::LoadingBeginning {
             // Keep the in-flight page, but let the user's new navigation supersede the jump.
             self.history = TranscriptHistoryState::LoadingOlder;
@@ -545,7 +555,8 @@ impl TranscriptView {
     }
 
     pub(crate) fn needs_history(&mut self, cells: &[Arc<dyn HistoryCell>]) -> bool {
-        self.search.needs_history(self.history)
+        (self.pending_previous_answer && self.history.has_unloaded_history())
+            || self.search.needs_history(self.history)
             || (self.search.allows_viewport_paging() && self.near_start(cells))
     }
 

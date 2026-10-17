@@ -427,6 +427,7 @@ impl TranscriptView {
                 ..anchor
             });
         }
+        self.resume_answer_navigation(cells);
         if !matches!(self.search.progress, Progress::AwaitingHistory) || inserted.is_empty() {
             return;
         }

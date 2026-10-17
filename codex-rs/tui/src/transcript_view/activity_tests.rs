@@ -51,6 +51,7 @@ fn unchanged_live_revisions_do_not_report_activity_but_hidden_text_does() {
                 revision,
                 animation_tick: None,
                 is_stream_continuation: false,
+                is_assistant_response: false,
                 cacheable: true,
             }),
             |_| Some(vec![HyperlinkLine::from(text)]),

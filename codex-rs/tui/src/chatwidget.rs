@@ -825,6 +825,8 @@ pub(crate) struct ActiveCellTranscriptKey {
     /// Whether the active cell continues the prior stream, which affects
     /// spacing between transcript blocks.
     pub(crate) is_stream_continuation: bool,
+    /// Semantic role of the active cell, used by answer navigation.
+    pub(crate) is_assistant_response: bool,
     /// Optional animation tick for time-dependent transcript output.
     ///
     /// When this changes, the overlay recomputes the cached tail even if the revision and width
@@ -2024,6 +2026,7 @@ impl ChatWidget {
                         .map(AsRef::as_ref),
                 )
                 .all(HistoryCell::has_stable_transcript_height),
+            is_assistant_response: cell.is_some_and(|cell| cell.is_assistant_response()),
             revision: self.transcript.active_cell_revision,
             is_stream_continuation: cell
                 .map(|cell| cell.is_stream_continuation())

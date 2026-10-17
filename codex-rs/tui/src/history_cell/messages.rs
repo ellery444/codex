@@ -446,6 +446,10 @@ impl AgentMessageCell {
 }
 
 impl HistoryCell for AgentMessageCell {
+    fn is_assistant_response(&self) -> bool {
+        !self.lines.is_empty()
+    }
+
     fn display_lines(&self, width: u16) -> Vec<Line<'static>> {
         visible_lines(self.display_hyperlink_lines(width))
     }
@@ -628,6 +632,10 @@ impl AgentMarkdownCell {
 }
 
 impl HistoryCell for AgentMarkdownCell {
+    fn is_assistant_response(&self) -> bool {
+        !self.markdown_source.is_empty()
+    }
+
     fn copy_source(&self) -> Option<&str> {
         Some(self.copy_source.as_deref().unwrap_or(&self.markdown_source))
     }
@@ -689,6 +697,10 @@ impl StreamingAgentTailCell {
 }
 
 impl HistoryCell for StreamingAgentTailCell {
+    fn is_assistant_response(&self) -> bool {
+        !self.lines.is_empty()
+    }
+
     fn display_lines(&self, width: u16) -> Vec<Line<'static>> {
         visible_lines(self.display_hyperlink_lines(width))
     }

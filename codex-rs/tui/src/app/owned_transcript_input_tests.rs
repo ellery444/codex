@@ -986,3 +986,56 @@ async fn modified_arrows_and_editor_chords_resume_composer_movement() -> Result<
     tui.set_owned_screen(/*owned*/ false)?;
     Ok(())
 }
+
+#[tokio::test]
+async fn alt_arrows_navigate_answers_before_default_chat_bindings() -> Result<()> {
+    let mut app = crate::app::test_support::make_test_app().await;
+    let mut app_server = Box::pin(crate::start_embedded_app_server_for_picker(&app.config)).await?;
+    let mut tui = crate::tui::test_support::make_test_tui()?;
+    tui.set_owned_screen(/*owned*/ true)?;
+    app.transcript_cells = vec![
+        Arc::new(crate::history_cell::new_user_prompt(
+            "question".into(),
+            vec![],
+            vec![],
+            vec![],
+        )),
+        Arc::new(crate::history_cell::AgentMessageCell::new(
+            (0..40)
+                .map(|row| format!("answer row {row}").into())
+                .collect(),
+            true,
+        )),
+    ];
+    app.chat_widget
+        .apply_external_edit("keep this draft".into());
+    for detailed in [false, true] {
+        app.transcript_view
+            .set_presentation(detailed, HistoryRenderMode::Rich);
+        app.transcript_view.jump_to_latest();
+        app.render_owned_transcript(&mut tui, Size::new(80, 12))?;
+        app.handle_tui_event(
+            &mut tui,
+            &mut app_server,
+            TuiEvent::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::ALT)),
+        )
+        .await?;
+        assert!(!app.transcript_view.is_following());
+        app.render_owned_transcript(&mut tui, Size::new(80, 12))?;
+        assert!(screen(&tui).contains("answer row 0"));
+        assert_eq!(
+            app.chat_widget.composer_text_with_pending(),
+            "keep this draft"
+        );
+        app.handle_tui_event(
+            &mut tui,
+            &mut app_server,
+            TuiEvent::Key(KeyEvent::new(KeyCode::End, KeyModifiers::CONTROL)),
+        )
+        .await?;
+        assert!(app.transcript_view.is_following());
+    }
+    app_server.shutdown().await?;
+    tui.set_owned_screen(/*owned*/ false)?;
+    Ok(())
+}
